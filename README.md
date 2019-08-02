@@ -9,9 +9,9 @@ It is a lightweight client socket solution, you can used it in Unity3d or C# pro
 
 ### How to use
 
-[![Github Releases](https://img.shields.io/github/downloads/atom/atom/total.svg)](https://github.com/hiramtan/HiSocket/releases) 
-
-Download dll and copy to your project(or you can use NuGet from here:[HiSocket NuGet package](https://www.nuget.org/packages/HiSocket))
+- Use source code: [source code](/src)
+- Download dll from release path: [![Github Releases](https://img.shields.io/github/downloads/atom/atom/total.svg)](https://github.com/hiramtan/HiSocket/releases) 
+- Use Nuget: [HiSocket NuGet package](https://www.nuget.org/packages/HiSocket)
 
  Quick Start:
 ```csharp
@@ -40,30 +40,27 @@ Download dll and copy to your project(or you can use NuGet from here:[HiSocket N
 ```
 
 More example:
-- C# project example:[Example](https://github.com/hiramtan/HiSocket/tree/master/src/HiSocket.Example)
-- Unity project example:[Example](https://github.com/hiramtan/HiSocket/tree/master/unity)
+- C# project example:[Example](src/HiSocket.Example)
+- Unity project example:[Example](src/HiSocket.Example_Unity)
 
 -----
 
 ### General
 This project contains:
-- Connection
+- Tcp
     - TcpConnection
-        - TcpSocket
-        - Package
-    - UdpConnection
-        - UdpSocket
+    - TcpSocket
     - Plugin
+      - Ping
+      - Statistical
 - Message
-    - Message register
+    - Binary Message
+    - Protobuf Message
     - Aes encryption
-    - Byte message
-    - Protobuf message
-
+- BlockBuffer
 
 ### Features
 - Support Tcp socket
-- Support Udp socket
 - Scalable byte Array
 - High-performance byte block buffer
 - Message registration and call back
@@ -73,20 +70,19 @@ This project contains:
 
 
 ### Details
-- Tcp and Udp are all use async connection in main thread(avoid thread blocking).
+- Use async connection in main thread(avoid thread blocking).
 - Using [Circular_buffer](https://en.wikipedia.org/wiki/Circular_buffer) to avoid memory allocation every time, and reduce garbage collection.
 - You can get current connect state and message by adding listener of event.
 - If you use Tcp socket, you should implement IPackage interface to pack or unpack message.
-- If you use Udp socket, you should declaring buffer size.
 - Ping: there is a ping plugin you can used, but if you are used in unity3d because of the bug of mono, it will throw an error on .net2.0(.net 4.6 will be fine, also you can use unity's api to get ping time)
 
 
 ### Advanced
-- If you are clear about socket, you also can use TcpSocket(UdpSocket) to achieve your logic, anyway the recommend is TcpConnection(UdpConnection).
+- If you are clear about socket, you also can use TcpSocket to achieve your logic, anyway the recommend is TcpConnection.
 - You can use API get socket and do extra logic, for example modify socket's out time
 - You can use API get send and receive buffer, for example when disconnect, how to handle buffer's data? just clear or resend to server. 
 - OnSocketReceive and OnReceive are diffrent, for example OnSocketReceive size is 100 byte, if user do nothing when uppack OnReceive size is 100. but when user do some zip/unzip(encription.etc) OnReceive size is not 100 anymore. 
-- You can add many different plugins based on TcpConnection(UdpConnection) to achieve different functions.
+- You can add many different plugins based on TcpConnection to achieve different functions.
 - There are a message register base class help user to quick register id and callback(based on reflection)
 - The encryption is use AES, if you want to use encryption you can use the API to encrypte your bytes.
 - .etc
@@ -134,11 +130,6 @@ If use Udp connection shold define send and receive's buffer size.
         StartCoroutine(Ping());
     }
     ```
-- Message Register
-- Protobuf
-- Bytes message
-- Encription
-
 
 ---------
 
@@ -147,87 +138,89 @@ There are many example in **HiSocketExample** project or in **HiSocket.unitypack
 
 Package example:
 ```csharp
-/// <summary>
-    /// Example: Used to pack or unpack message
-    /// You should inheritance IPackage interface and implement your own logic
-    /// </summary>
-    class PackageExample : IPackage
-    {  /// <summary>
-       /// Pack your message here(this is only an example)
-       /// </summary>
-       /// <param name="source"></param>
-       /// <param name="unpackedHandler"></param>
-        public void Unpack(IByteArray source, Action<byte[]> unpackedHandler)
+public class PackageExample:PackageBase
+    {
+        protected override void Pack(BlockBuffer<byte> bytes, Action<byte[]> onPacked)
         {
-            // Unpack your message(use int, 4 byte as head)
-            while (source.Length >= 4)
-            {
-                var head = source.Read(4);
-                int bodyLength = BitConverter.ToInt32(head, 0);// get body's length
-                if (source.Length >= bodyLength)
-                {
-                    var unpacked = source.Read(bodyLength);// get body
-                    unpackedHandler(unpacked);
-                }
-                else
-                {
-                    source.Insert(0, head);// rewrite in, used for next time
-                }
-            }
+            //Use int as header
+            int length = bytes.WritePosition;
+            var header = BitConverter.GetBytes(length);
+            var newBytes = new BlockBuffer<byte>(length + header.Length);
+            //Write header and body to buffer
+            newBytes.Write(header);
+            newBytes.Write(bytes.Buffer);
+            //Notice pack funished
+            onPacked(newBytes.Buffer);
         }
 
-        /// <summary>
-        /// Unpack your message here(this is only an example)
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="packedHandler"></param>
-        public void Pack(IByteArray source, Action<byte[]> packedHandler)
+        protected override void Unpack(BlockBuffer<byte> bytes, Action<byte[]> onUnpacked)
         {
-            // Add head length to your message(use int, 4 byte as head)
-            var length = source.Length;
-            var head = BitConverter.GetBytes(length);
-            source.Insert(0, head);// add head bytes
-            var packed = source.Read(source.Length);
-            packedHandler(packed);
+            //Because header is int and cost 4 byte
+            while (bytes.WritePosition > 4)
+            {
+                int length = BitConverter.ToInt32(bytes.Buffer, 0);
+                //If receive body
+                if (bytes.WritePosition >= 4 + length)
+                {
+                    bytes.MoveReadPostion(4);
+                    var data = bytes.Read(length);
+                    //Notice unpack finished
+                    onUnpacked(data);
+                    bytes.ResetIndex();
+                }
+            }
         }
     }
 ```
 
 ```csharp
-private IPackage package = new PackageExample();
-        private TcpConnection _tcp;
-        static void Main(string[] args)
+TcpConnection tcp;
+        void Connect()
         {
+            tcp = new TcpConnection(new PackageExample());
+            tcp.OnDisconnected += OnDisconnect;
+            tcp.Connect("127.0.0.1", 999);
+            tcp.Socket.NoDelay = true;
+            tcp.Socket.SendTimeout = 100;
+            tcp.Socket.ReceiveTimeout = 200;
+            //...
 
-        }
-        void Init()
-        {
-            tcp = new TcpConnection(package);
-            tcp.OnConnected += OnConnected;
-            tcp.OnReceive += Receive;
-            //_tcp.OnError
-            //_tcp.OnDisconnected
-        }
-        void OnConnected()
-        {
-            //connect success
-            tcp.Send(new byte[10]);//send message
-            tcp.DisConnect();//disconnect
+
+            // you can add plugin sub from IPlugins
+            tcp.AddPlugin(new StatisticalPlugin("Statistical"));//this plugin calculate how many send
         }
 
-        void Receive(byte[] bytes)
+        void OnDisconnect()
         {
-            //get message from server
+            var length = tcp.SendBuffer.WritePosition;
+            Console.WriteLine("Still have {0} not send to server when abnormal shutdown");
+            var data = tcp.SendBuffer.Read(length);
+            tcp.SendBuffer.ResetIndex();
+
+            //use can handle these data, for example maybe can send next time when connect again
+            //tcp.Send(data);
         }
 ```
 
 ```csharp
- void Init()
+ /// <summary>
+    /// The recommend is use TcpConnection 
+    /// </summary>
+    class Example3
+    {
+        TcpSocket tcp; //The recommend is use TcpConnection 
+        void Connect()
         {
-            var tcp = new TcpConnection(new PackageExample());
-            tcp.AddPlugin(new PingPlugin("ping", tcp));
-            //tcp.GetPlugin("ping");
+            tcp = new TcpSocket(1024);//set buffer size
+            tcp.OnReceiveBytes += OnReceive;
+            tcp.Connect("127.0.0.1", 999);
         }
+
+        void OnReceive(byte[] bytes)
+        {
+            //split bytes here
+        }
+    }
 ```
 
 

@@ -7,7 +7,7 @@
 
 using System;
 using System.Reflection;
-using HiFramework.Assert;
+using HiFramework;
 
 namespace HiSocket.Message
 {

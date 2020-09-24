@@ -6,7 +6,6 @@
 ***************************************************************/
 
 using HiFramework;
-using HiFramework.Assert;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -167,11 +166,14 @@ namespace HiSocket.Tcp
         public void ConnectWWW(string www, int port)
         {
             var hostEntry = Dns.GetHostEntry(www);
-
-            foreach (IPAddress address in hostEntry.AddressList)
+            if (hostEntry.AddressList != null && hostEntry.AddressList.Length > 0)
             {
-                IPEndPoint ipe = new IPEndPoint(address, port);
+                IPEndPoint ipe = new IPEndPoint(hostEntry.AddressList[0], port);
                 Connect(ipe);
+            }
+            else
+            {
+                AssertThat.Fail("Check host"); 
             }
         }
 
@@ -287,6 +289,7 @@ namespace HiSocket.Tcp
             {
                 if (IsConnected)
                 {
+                    DisconnectedEvnet();
                     try
                     {
                         Socket.Shutdown(SocketShutdown.Both);

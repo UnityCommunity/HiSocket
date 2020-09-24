@@ -3,7 +3,7 @@
 // Author: hiramtan@live.com
 //***************************************************************************
 
-using HiFramework.Assert;
+using HiFramework;
 using HiSocket.Tcp;
 using System;
 using System.Collections.Generic;

@@ -3,7 +3,7 @@
 // Author: hiramtan@live.com
 //***************************************************************************
 
-using HiFramework.Assert;
+using HiFramework;
 using System;
 using System.Collections.Generic;
 using System.IO;

@@ -7,7 +7,7 @@
 
 using System;
 using System.Collections.Generic;
-using HiFramework.Assert;
+using HiFramework;
 
 namespace HiSocket.Tcp
 {

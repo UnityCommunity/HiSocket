@@ -1,63 +1,60 @@
 ﻿/***************************************************************
- * Description: Note: the recommand is tcpConnection.cs
- *
- * Documents: https://github.com/hiramtan/HiSocket
- * Author: hiramtan@live.com
+ * Description: Block buffer for reuse array
+ * 
+ * Documents: https://github.com/hiram3512/HiSocket
+ * Support: hiramtan@live.com
 ***************************************************************/
 
-using HiFramework;
 using System;
-using System.Collections.Generic;
 using System.Net;
 
 namespace HiSocket.Tcp
 {
     /// <summary>
-    /// socket api
+    /// Tcp socket interface
     /// </summary>
     public interface ITcpSocket : IDisposable
     {
         /// <summary>
-        /// Get socket and modify it(for example: set timeout)
+        /// Socket instance
         /// </summary>
         System.Net.Sockets.Socket Socket { get; }
 
         /// <summary>
-        /// if connected(should use heart beat check if server disconnect)
-        /// </summary>
-        bool IsConnected { get; }
-
-        /// <summary>
-        /// Send buffer
-        /// If disconnect, user can operate the remain data
-        /// </summary>
-        IBlockBuffer<byte> SendBuffer { get; }
-
-        /// <summary>
-        /// Receive buffer
-        /// </summary>
-        IBlockBuffer<byte> ReceiveBuffer { get; }
-
-        /// <summary>
-        /// trigger when connecting
+        /// when connecting
         /// </summary>
         event Action OnConnecting;
 
         /// <summary>
-        /// trigger when connected
+        /// when connected
         /// </summary>
         event Action OnConnected;
 
         /// <summary>
-        /// Trigger when disconnecte
+        /// when disconnecte
         /// </summary>
         event Action OnDisconnected;
+
+        /// <summary>
+        /// when exception
+        /// </summary>
+        event Action<Exception> OnException;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        IBlockBuffer<byte> SendBuffer { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        IBlockBuffer<byte> ReceiveBuffer { get; set; }
 
         /// <summary>
         /// trigger when get bytes from server
         /// use .net socket api
         /// </summary>
-        event Action<byte[]> OnReceiveBytes;
+        event Action<IBlockBuffer<byte>> OnReceiveBytes;
 
         /// <summary>
         /// trigger when send bytes to server
@@ -69,7 +66,7 @@ namespace HiSocket.Tcp
         /// Connect to server
         /// </summary>
         /// <param name="iep">server</param>
-        void Connect(IPEndPoint iep);
+        void Connect(EndPoint iep);
 
         /// <summary>
         /// Connect to server
@@ -92,11 +89,17 @@ namespace HiSocket.Tcp
         /// <param name="port"></param>
         void ConnectWWW(string www, int port);
 
+
+        /// <summary>
+        /// Send buffer data
+        /// </summary>
+        void SendBytesInBuffer();
+
         /// <summary>
         /// Send bytes to server
         /// </summary>
         /// <param name="bytes"></param>
-        void Send(byte[] bytes);
+        void SendBytes(byte[] bytes);
 
         /// <summary>
         /// Send bytes to server
@@ -104,7 +107,7 @@ namespace HiSocket.Tcp
         /// <param name="bytes"></param>
         /// <param name="index"></param>
         /// <param name="length"></param>
-        void Send(byte[] bytes, int index, int length);
+        void SendBytes(byte[] bytes, int index, int length);
 
         /// <summary>
         /// Disconnect

@@ -1,26 +1,29 @@
 ﻿/***************************************************************
- * Description: pack and unpack message
- *
- * Documents: https://github.com/hiramtan/HiSocket
- * Author: hiramtan@live.com
+ * Description: Block buffer for reuse array
+ * 
+ * Documents: https://github.com/hiram3512/HiSocket
+ * Support: hiramtan@live.com
 ***************************************************************/
-
-using System;
 
 namespace HiSocket.Tcp
 {
+    /// <summary>
+    /// Package interface for spit bytes
+    /// </summary>
     public interface IPackage
     {
         /// <summary>
-        /// Handle data receive from server
+        /// Add head bytes and pack a new bytes to send
         /// </summary>
+        /// <param name="message"></param>
         /// <param name="bytes"></param>
-        void Unpack(byte[] source, Action<byte[]> onUnpacked);
+        void Pack(byte[] message, IBlockBuffer<byte> sendBuffer);
 
         /// <summary>
-        /// handle data will send to server
+        /// Get data from receive buffer and split by head
         /// </summary>
-        /// <param name="bytes"></param>
-        void Pack(byte[] source, Action<byte[]> onPacked);
+        /// <param name="receiveBuffer"></param>
+        /// <param name="message"></param>
+        void Unpack(IBlockBuffer<byte> receiveBuffer, ref byte[] message);
     }
 }

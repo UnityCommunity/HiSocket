@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "W8UKg3nOkEHmtPPexjl1cIDWdE4+DZcJ3MO16vnl4kUxYoSkArc/3+wWrMBgEKhIL2W7AOaUZ0sZxICYsOY35w==",
+  "success": true,
+  "projectFilePath": "F:\\HiGit\\GitHub\\HiSocket\\src\\HiSocket.Udp\\HiSocket.Udp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\hiramtan\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
+    "C:\\Users\\hiramtan\\.nuget\\packages\\netstandard.library\\2.0.3\\netstandard.library.2.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

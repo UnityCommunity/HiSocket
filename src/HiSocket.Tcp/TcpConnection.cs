@@ -1,16 +1,19 @@
 ﻿/***************************************************************
- * Description: This class for user simply use tcp socket in project
- *
- * Documents: https://github.com/hiramtan/HiSocket
- * Author: hiramtan@live.com
+ * Description: Block buffer for reuse array
+ * 
+ * Documents: https://github.com/hiram3512/HiSocket
+ * Support: hiramtan@live.com
 ***************************************************************/
 
 using System;
 using System.Collections.Generic;
-using HiFramework;
+using System.Text;
 
 namespace HiSocket.Tcp
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class TcpConnection : TcpSocket, ITcpConnection
     {
         /// <summary>
@@ -23,79 +26,49 @@ namespace HiSocket.Tcp
         /// </summary>
         public event Action<byte[]> OnReceiveMessage;
 
+        private IPackage _package;
 
-        private readonly IPackage _package;
-
-        private Dictionary<string, IPlugin> _plugins = new Dictionary<string, IPlugin>();
-
-        public TcpConnection(IPackage package)
+        public TcpConnection(IPackage package) : base()
         {
-            this._package = package;
-            OnReceiveBytes += SocketReceiveHandler;
-        }
-
-        public new void Send(byte[] bytes)
-        {
-            SendEvent(bytes);
-            _package.Pack(bytes, x => { base.Send(x); });
-        }
-
-        void SocketReceiveHandler(byte[] bytes)
-        {
-            _package.Unpack(bytes, x => { ReceiveEvent(x); });
-        }
-
-        /// <summary>
-        /// Add plugin to extend logic
-        /// </summary>
-        /// <param name="plugin"></param>
-        public void AddPlugin(IPlugin plugin)
-        {
-            AssertThat.IsNotNull(plugin, "Plugin is null");
-            plugin.TcpConnection = this;
-            _plugins.Add(plugin.Name, plugin);
-        }
-
-        /// <summary>
-        /// Get plugin by name
-        /// </summary>
-        /// <param name="name">plugin's name</param>
-        /// <returns>plugin</returns>
-        public IPlugin GetPlugin(string name)
-        {
-            AssertThat.IsNotNullOrEmpty(name, "Name is null or empty");
-            return _plugins[name];
-        }
-
-        public bool IsPluginExist(string name)
-        {
-            AssertThat.IsNotNullOrEmpty(name, "Name is null or empty");
-            return _plugins.ContainsKey(name);
-        }
-
-        /// <summary>
-        /// Remove plugin 
-        /// </summary>
-        /// <param name="name">plugin's name</param>
-        public void RemovePlugin(string name)
-        {
-            AssertThat.IsNotNullOrEmpty(name, "Name is null or empty");
-            _plugins.Remove(name);
-        }
-
-        void SendEvent(byte[] bytes)
-        {
-            if (OnSendMessage != null)
+            if (package == null)
             {
-                OnSendMessage(bytes);
+                ExceptionEvent(new Exception("package is null"));
             }
+            _package = package;
+            OnReceiveBytes += OnReceiveBytesFromSocket;
         }
 
-        void ReceiveEvent(byte[] bytes)
+
+        public void Send(byte[] data)
+        {
+            if (data == null || data.Length == 0)
+            {
+                ExceptionEvent(new Exception("data null or empty"));
+            }
+            SendMessageEvent(data);
+            _package.Pack(data, SendBuffer);
+            SendBytesInBuffer();
+        }
+
+        private void OnReceiveBytesFromSocket(IBlockBuffer<byte> buffer)
+        {
+            byte[] bytes = new byte[] { };
+            _package.Unpack(buffer, ref bytes);
+            ReceiveMessageEvent(bytes);
+        }
+
+        private void ReceiveMessageEvent(byte[] data)
         {
             if (OnReceiveMessage != null)
             {
-                OnReceiveMessage(bytes);
+                OnReceiveMessage(data);
+            }
+        }
+        private void SendMessageEvent(byte[] data)
+        {
+            if (OnSendMessage != null)
+            {
+                OnSendMessage(data);
             }
         }
     }
